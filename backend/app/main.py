@@ -16,7 +16,7 @@ app = FastAPI()
 # ✅ Session middleware FIRST
 app.add_middleware(
     SessionMiddleware,
-    secret_key=""
+    secret_key="25102004589"
 )
 
 # ✅ CORS

@@ -1,32 +1,51 @@
-import smtplib
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from app.core.config import settings
+
+from app.utils.email import _send_message
 
 
 def send_welcome_email(to_email: str, name: str):
-    subject = "Welcome to AI Code Review 🎉"
+    subject = "🎉 Welcome to AI Code Review Platform"
 
-    body = f"""
-Hi {name} 👋,
+    html = f"""
+    <html>
+    <body style="font-family:Arial,sans-serif">
+        <h2>Welcome {name}! 👋</h2>
+
+        <p>Thank you for registering on <b>AI Code Review Platform</b>.</p>
+
+        <ul>
+            <li>✅ Practice coding</li>
+            <li>✅ Get AI code reviews</li>
+            <li>✅ Improve your coding skills</li>
+            <li>✅ Earn XP and badges</li>
+        </ul>
+
+        <p>Happy Coding 🚀</p>
+
+        <p>
+            <strong>— AI Code Review Team</strong>
+        </p>
+    </body>
+    </html>
+    """
+
+    plain = f"""
+Welcome {name}!
 
 Thank you for registering on AI Code Review Platform.
 
-You can now:
-✅ Practice coding
-✅ Get AI code reviews
-✅ Improve skills
-✅ Solve code for free
+Happy Coding!
 
-Happy Coding 🚀
-
-— AI Code Review Team
+- AI Code Review Team
 """
 
-    msg = MIMEText(body)
+    msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = settings.EMAIL_USER
+    msg["From"] = f"CodeReview Platform <{settings.EMAIL_FROM}>"
     msg["To"] = to_email
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(settings.EMAIL_USER, settings.EMAIL_PASS)
-        server.send_message(msg)
+    msg.attach(MIMEText(plain, "plain"))
+    msg.attach(MIMEText(html, "html"))
+
+    _send_message(msg)

@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     # Brevo
     BREVO_API_KEY: str
 
+    # Email
+    EMAIL_FROM: str
+    EMAIL_FROM_NAME: str = "CodeReview AI"
+
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""

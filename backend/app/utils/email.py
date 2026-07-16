@@ -678,21 +678,29 @@ async def send_certificate_email(
     alt.attach(MIMEText(html_body,  "html"))
     msg.attach(alt)
 
-    # PDF attachment
-    pdf_part = MIMEApplication(certificate_pdf, _subtype="pdf")
-    pdf_part.add_header("Content-Disposition", "attachment", filename=filename)
-    msg.attach(pdf_part)
+   # PDF attachment
+pdf_part = MIMEApplication(certificate_pdf, _subtype="pdf")
+pdf_part.add_header(
+    "Content-Disposition",
+    "attachment",
+    filename=filename
+)
+msg.attach(pdf_part)
 
-    try:
-        _send_message(msg)
-        logger.info(
-            "Certificate email sent → %s (%s) [%d KB PDF]",
-            to_email, level_name, len(certificate_pdf) // 1024,
-        )
-        return True
-   except Exception as exc:
-        logger.error("SMTP error sending certificate email to %s: %s", to_email, exc)
-        return False
-    except Exception as exc:
-        logger.exception("Unexpected error sending certificate email to %s: %s", to_email, exc)
-        return False
+try:
+    _send_message(msg)
+    logger.info(
+        "Certificate email sent → %s (%s) [%d KB PDF]",
+        to_email,
+        level_name,
+        len(certificate_pdf) // 1024,
+    )
+    return True
+
+except Exception as exc:
+    logger.exception(
+        "Error sending certificate email to %s: %s",
+        to_email,
+        exc,
+    )
+    return False

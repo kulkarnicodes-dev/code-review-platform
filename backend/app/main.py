@@ -31,6 +31,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "https://code-review-platform-sooty.vercel.app",
+        "https://code-review-platform-git-main-yashkulkarni052s-projects.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],

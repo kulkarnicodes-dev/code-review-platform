@@ -1,51 +1,44 @@
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
+from email import message_from_string
+from app.core.config import settings
 
-from app.utils.email import _send_message
 
+def _send_message(msg):
+    configuration = sib_api_v3_sdk.Configuration()
+    configuration.api_key["api-key"] = settings.BREVO_API_KEY
 
-def send_welcome_email(to_email: str, name: str):
-    subject = "🎉 Welcome to AI Code Review Platform"
+    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(
+        sib_api_v3_sdk.ApiClient(configuration)
+    )
 
-    html = f"""
-    <html>
-    <body style="font-family:Arial,sans-serif">
-        <h2>Welcome {name}! 👋</h2>
+    parsed = message_from_string(msg.as_string())
 
-        <p>Thank you for registering on <b>AI Code Review Platform</b>.</p>
+    subject = parsed["Subject"]
+    sender = {
+        "email": settings.EMAIL_USER,
+        "name": "CodeReview AI",
+    }
 
-        <ul>
-            <li>✅ Practice coding</li>
-            <li>✅ Get AI code reviews</li>
-            <li>✅ Improve your coding skills</li>
-            <li>✅ Earn XP and badges</li>
-        </ul>
+    receiver = [
+        {
+            "email": parsed["To"]
+        }
+    ]
 
-        <p>Happy Coding 🚀</p>
+    html = parsed.get_payload()
 
-        <p>
-            <strong>— AI Code Review Team</strong>
-        </p>
-    </body>
-    </html>
-    """
+    send_email = sib_api_v3_sdk.SendSmtpEmail(
+        to=receiver,
+        sender=sender,
+        subject=subject,
+        html_content=f"<pre>{html}</pre>"
+    )
 
-    plain = f"""
-Welcome {name}!
+    try:
+        api_instance.send_transac_email(send_email)
+        print("✅ Email sent successfully!")
 
-Thank you for registering on AI Code Review Platform.
-
-Happy Coding!
-
-- AI Code Review Team
-"""
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = f"CodeReview Platform <{settings.EMAIL_FROM}>"
-    msg["To"] = to_email
-
-    msg.attach(MIMEText(plain, "plain"))
-    msg.attach(MIMEText(html, "html"))
-
-    _send_message(msg)
+    except ApiException as e:
+        print("❌ Brevo Error:", e)
+        raise

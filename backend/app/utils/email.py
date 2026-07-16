@@ -8,18 +8,26 @@ Handles all transactional emails for the gamification system.
 
 import smtplib
 import logging
+import base64
+import requests
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from typing import List, Optional
-import resend
-from app.core.config import settings
-
-resend.api_key = settings.RESEND_API_KEY
-
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BREVO (SENDINBLUE) TRANSACTIONAL EMAIL CONFIG
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Uses Brevo's free transactional email API (300 emails/day on the free plan).
+# Sign up at https://www.brevo.com, grab an API key from
+# Settings → SMTP & API → API Keys, and set it as BREVO_API_KEY in your env /
+# settings (alongside EMAIL_FROM, which must be a verified sender in Brevo).
+
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -176,17 +184,11 @@ BADGE_ICONS = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SHARED SMTP TRANSPORT
+# SHARED TRANSPORT (Brevo)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-import base64
-import resend
-
-resend.api_key = settings.RESEND_API_KEY
-
-
 def _send_message(msg: MIMEMultipart) -> None:
-    """Send email using Resend API."""
+    """Send email using the Brevo (Sendinblue) transactional email API."""
 
     html_content = ""
     text_content = ""
@@ -215,29 +217,40 @@ def _send_message(msg: MIMEMultipart) -> None:
             payload = part.get_payload(decode=True)
 
             attachments.append({
-                "filename": part.get_filename(),
+                "name": part.get_filename(),
                 "content": base64.b64encode(payload).decode("utf-8"),
             })
 
-    email = {
-        "from": settings.EMAIL_FROM,
-        "to": [msg["To"]],
+    payload = {
+        "sender": {"email": settings.EMAIL_FROM},
+        "to": [{"email": msg["To"]}],
         "subject": msg["Subject"],
     }
 
     if html_content:
-        email["html"] = html_content
+        payload["htmlContent"] = html_content
 
     if text_content:
-        email["text"] = text_content
+        payload["textContent"] = text_content
 
     if attachments:
-        email["attachments"] = attachments
+        payload["attachment"] = attachments
 
-    response = resend.Emails.send(email)
+    headers = {
+        "accept": "application/json",
+        "api-key": settings.BREVO_API_KEY,
+        "content-type": "application/json",
+    }
+
+    response = requests.post(BREVO_API_URL, json=payload, headers=headers, timeout=15)
+
+    if response.status_code not in (200, 201):
+        raise RuntimeError(
+            f"Brevo API error ({response.status_code}): {response.text}"
+        )
 
     print("✅ Email sent successfully")
-    print(response)
+    print(response.json())
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # LEVEL-UP EMAIL BUILDERS
@@ -630,10 +643,7 @@ async def send_level_up_email(
         )
         return True
     except Exception as exc:
-        logger.error("SMTP error sending level-up email to %s: %s", to_email, exc)
-        return False
-    except Exception as exc:
-        logger.exception("Unexpected error sending level-up email to %s: %s", to_email, exc)
+        logger.exception("Error sending level-up email to %s: %s", to_email, exc)
         return False
 
 

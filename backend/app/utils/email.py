@@ -629,7 +629,7 @@ async def send_level_up_email(
             to_email, level, level_name, len(badges),
         )
         return True
-    except smtplib.SMTPException as exc:
+    except Exception as exc:
         logger.error("SMTP error sending level-up email to %s: %s", to_email, exc)
         return False
     except Exception as exc:
@@ -690,7 +690,7 @@ async def send_certificate_email(
             to_email, level_name, len(certificate_pdf) // 1024,
         )
         return True
-    except smtplib.SMTPException as exc:
+   except Exception as exc:
         logger.error("SMTP error sending certificate email to %s: %s", to_email, exc)
         return False
     except Exception as exc:

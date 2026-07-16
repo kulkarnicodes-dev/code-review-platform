@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     SMTP_USE_TLS: bool = True
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # Resend
+    RESEND_API_KEY: str
+    EMAIL_FROM: str
+
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""

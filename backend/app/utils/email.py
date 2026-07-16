@@ -179,41 +179,65 @@ BADGE_ICONS = {
 # SHARED SMTP TRANSPORT
 # ═══════════════════════════════════════════════════════════════════════════════
 
+import base64
+import resend
+
+resend.api_key = settings.RESEND_API_KEY
+
+
 def _send_message(msg: MIMEMultipart) -> None:
     """Send email using Resend API."""
 
     html_content = ""
+    text_content = ""
+    attachments = []
 
-    # Extract HTML part from MIME message
     for part in msg.walk():
-        if part.get_content_type() == "text/html":
+
+        content_type = part.get_content_type()
+        disposition = str(part.get("Content-Disposition", ""))
+
+        if content_type == "text/html":
             payload = part.get_payload(decode=True)
             if payload:
                 html_content = payload.decode(
                     part.get_content_charset() or "utf-8"
                 )
-            break
 
-    # Fallback to plain text if no HTML exists
-    if not html_content:
-        for part in msg.walk():
-            if part.get_content_type() == "text/plain":
-                payload = part.get_payload(decode=True)
-                if payload:
-                    html_content = (
-                        "<pre>"
-                        + payload.decode(part.get_content_charset() or "utf-8")
-                        + "</pre>"
-                    )
-                break
+        elif content_type == "text/plain":
+            payload = part.get_payload(decode=True)
+            if payload:
+                text_content = payload.decode(
+                    part.get_content_charset() or "utf-8"
+                )
 
-    resend.Emails.send({
+        elif "attachment" in disposition:
+            payload = part.get_payload(decode=True)
+
+            attachments.append({
+                "filename": part.get_filename(),
+                "content": base64.b64encode(payload).decode("utf-8"),
+            })
+
+    email = {
         "from": settings.EMAIL_FROM,
         "to": [msg["To"]],
         "subject": msg["Subject"],
-        "html": html_content,
-    })
+    }
 
+    if html_content:
+        email["html"] = html_content
+
+    if text_content:
+        email["text"] = text_content
+
+    if attachments:
+        email["attachments"] = attachments
+
+    response = resend.Emails.send(email)
+
+    print("✅ Email sent successfully")
+    print(response)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # LEVEL-UP EMAIL BUILDERS
@@ -593,7 +617,7 @@ async def send_level_up_email(
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"]    = f"CodeReview Platform <{settings.SMTP_FROM_EMAIL}>"
+    msg["From"] = settings.EMAIL_FROM
     msg["To"]      = to_email
     msg.attach(MIMEText(plain_body, "plain"))
     msg.attach(MIMEText(html_body,  "html"))
@@ -645,7 +669,7 @@ async def send_certificate_email(
     # "mixed" outer wrapper to carry both the HTML body and the PDF attachment
     msg = MIMEMultipart("mixed")
     msg["Subject"] = subject
-    msg["From"]    = f"CodeReview Platform <{settings.SMTP_FROM_EMAIL}>"
+    msg["From"] = settings.EMAIL_FROM
     msg["To"]      = to_email
 
     # HTML + plain text body

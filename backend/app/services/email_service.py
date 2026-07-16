@@ -1,44 +1,57 @@
-import sib_api_v3_sdk
-from sib_api_v3_sdk.rest import ApiException
-from email import message_from_string
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 from app.core.config import settings
+from app.utils.email import _send_message
 
 
-def _send_message(msg):
-    configuration = sib_api_v3_sdk.Configuration()
-    configuration.api_key["api-key"] = settings.BREVO_API_KEY
+def send_welcome_email(to_email: str, name: str):
+    """Send welcome email to a newly registered user."""
 
-    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(
-        sib_api_v3_sdk.ApiClient(configuration)
-    )
+    msg = MIMEMultipart("alternative")
 
-    parsed = message_from_string(msg.as_string())
+    msg["Subject"] = "🎉 Welcome to CodeReview AI"
+    msg["From"] = settings.EMAIL_USER
+    msg["To"] = to_email
 
-    subject = parsed["Subject"]
-    sender = {
-        "email": settings.EMAIL_USER,
-        "name": "CodeReview AI",
-    }
+    text = f"""
+Hi {name},
 
-    receiver = [
-        {
-            "email": parsed["To"]
-        }
-    ]
+Welcome to CodeReview AI!
 
-    html = parsed.get_payload()
+Your account has been created successfully.
 
-    send_email = sib_api_v3_sdk.SendSmtpEmail(
-        to=receiver,
-        sender=sender,
-        subject=subject,
-        html_content=f"<pre>{html}</pre>"
-    )
+Happy Coding!
 
-    try:
-        api_instance.send_transac_email(send_email)
-        print("✅ Email sent successfully!")
+— CodeReview AI Team
+"""
 
-    except ApiException as e:
-        print("❌ Brevo Error:", e)
-        raise
+    html = f"""
+<html>
+<body>
+    <h2>Welcome {name}! 🎉</h2>
+
+    <p>Your account has been created successfully.</p>
+
+    <p>You can now:</p>
+
+    <ul>
+        <li>✅ Review code with AI</li>
+        <li>✅ Track your progress</li>
+        <li>✅ Earn badges</li>
+        <li>✅ Improve your coding skills</li>
+    </ul>
+
+    <p>Happy Coding 🚀</p>
+
+    <br>
+
+    <strong>CodeReview AI Team</strong>
+</body>
+</html>
+"""
+
+    msg.attach(MIMEText(text, "plain"))
+    msg.attach(MIMEText(html, "html"))
+
+    _send_message(msg)

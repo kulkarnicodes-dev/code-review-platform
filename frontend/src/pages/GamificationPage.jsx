@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 /* ─── Paste your auth token getter here ─────────────────────────── */
 const getToken = () => localStorage.getItem("token") || localStorage.getItem("access_token") || "";
-const API = "http://localhost:8000/api/v1";
+const API =   import.meta.env.VITE_API_URL ||   "https://code-review-platform-nt4u.onrender.com/api/v1";
 
 /* ─── Tiny API helpers ───────────────────────────────────────────── */
 const apiFetch = (path) =>

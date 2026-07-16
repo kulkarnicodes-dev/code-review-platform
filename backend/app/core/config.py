@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # Resend
     RESEND_API_KEY: str
     EMAIL_FROM: str
+    
+    # Brevo
+    BREVO_API_KEY: str
 
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""

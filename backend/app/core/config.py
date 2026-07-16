@@ -34,10 +34,6 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USE_TLS: bool = True
     FRONTEND_URL: str = "http://localhost:5173"
-
-    # Resend
-    RESEND_API_KEY: str
-    EMAIL_FROM: str
     
     # Brevo
     BREVO_API_KEY: str

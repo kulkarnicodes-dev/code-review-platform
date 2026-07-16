@@ -12,6 +12,10 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from typing import List, Optional
+import resend
+from app.core.config import settings
+
+resend.api_key = settings.RESEND_API_KEY
 
 from app.core.config import settings
 
@@ -176,14 +180,39 @@ BADGE_ICONS = {
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _send_message(msg: MIMEMultipart) -> None:
-    """Deliver a pre-built MIME message via the configured SMTP server."""
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-        server.ehlo()
-        if getattr(settings, "SMTP_USE_TLS", True):
-            server.starttls()
-        if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
-            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-        server.sendmail(msg["From"], msg["To"], msg.as_string())
+    """Send email using Resend API."""
+
+    html_content = ""
+
+    # Extract HTML part from MIME message
+    for part in msg.walk():
+        if part.get_content_type() == "text/html":
+            payload = part.get_payload(decode=True)
+            if payload:
+                html_content = payload.decode(
+                    part.get_content_charset() or "utf-8"
+                )
+            break
+
+    # Fallback to plain text if no HTML exists
+    if not html_content:
+        for part in msg.walk():
+            if part.get_content_type() == "text/plain":
+                payload = part.get_payload(decode=True)
+                if payload:
+                    html_content = (
+                        "<pre>"
+                        + payload.decode(part.get_content_charset() or "utf-8")
+                        + "</pre>"
+                    )
+                break
+
+    resend.Emails.send({
+        "from": settings.EMAIL_FROM,
+        "to": [msg["To"]],
+        "subject": msg["Subject"],
+        "html": html_content,
+    })
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
